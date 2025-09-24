@@ -1,0 +1,263 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "owner@demorepairshop.com",
+      "passwordHash": "$2b$10$V8UvS5J4SgZGQYZRDM9jceR7vP.H2C.Mm4mVGl8Gm1m.xGHZYnZ4W",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "OWNER",
+      "status": "ACTIVE",
+      "organizationId": "1",
+      "createdAt": "2024-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "email": "stevena184@gmail.com",
+      "passwordHash": "$2b$10$A9.wGq26gCl6FajEO6oS0eAWlpnu8g9grS.vyK.7ik55OoKkes3DO",
+      "firstName": "Steven",
+      "lastName": "Anderson",
+      "role": "OWNER",
+      "status": "ACTIVE",
+      "organizationId": "2",
+      "createdAt": "2025-09-23T15:01:42.903Z"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "1",
+      "name": "Demo Repair Shop",
+      "plan": "FREE",
+      "status": "ACTIVE",
+      "activeUserLimit": 1,
+      "features": [
+        "Basic Ticketing",
+        "Customer Management",
+        "1 User"
+      ],
+      "billingEmail": "owner@demorepairshop.com",
+      "country": "GB",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z",
+      "monthlyRevenue": 0,
+      "userCount": 1,
+      "ticketCount": 0,
+      "storageUsed": 12
+    },
+    {
+      "id": "2",
+      "name": "Kernow Designs LTD",
+      "plan": "FREE",
+      "status": "ACTIVE",
+      "activeUserLimit": 1,
+      "features": [
+        "Basic Ticketing",
+        "Customer Management",
+        "1 User"
+      ],
+      "billingEmail": "stevena184@gmail.com",
+      "country": "GB",
+      "createdAt": "2025-09-23T15:01:42.903Z",
+      "updatedAt": "2025-09-23T15:01:42.904Z",
+      "monthlyRevenue": 0,
+      "userCount": 0,
+      "ticketCount": 0,
+      "storageUsed": 0
+    }
+  ],
+  "tickets": [
+    {
+      "id": "1",
+      "ticketNumber": "T2025-0001",
+      "organizationId": "1",
+      "status": "NEW",
+      "priority": "LOW",
+      "barcodeData": "TICKET:T2025-0001",
+      "assets": [
+        {
+          "name": "HP Zbook",
+          "type": "LAPTOP",
+          "condition": "POOR"
+        },
+        {
+          "name": "Charger for ZBOOK",
+          "type": "CHARGER",
+          "condition": "GOOD"
+        }
+      ],
+      "computerPassword": "fingerinh03s",
+      "attachments": [],
+      "timeEntries": [],
+      "notes": [],
+      "tags": [],
+      "customFields": {},
+      "customerId": "4",
+      "title": "Windows boot loops",
+      "description": "Windows wont boot",
+      "problemDescription": "Customer states windows wont boot, having issues starting since update. Windows11.",
+      "createdAt": "2025-09-23T13:30:22.100Z",
+      "updatedAt": "2025-09-23T13:30:22.100Z"
+    },
+    {
+      "id": "2",
+      "ticketNumber": "T2025-0002",
+      "organizationId": "2",
+      "status": "NEW",
+      "priority": "MEDIUM",
+      "barcodeData": "TICKET:T2025-0002",
+      "assets": [],
+      "attachments": [],
+      "timeEntries": [],
+      "notes": [],
+      "tags": [],
+      "customFields": {},
+      "customerId": "5",
+      "title": "Broken screen",
+      "description": "Test",
+      "problemDescription": "Test",
+      "createdAt": "2025-09-23T16:08:03.818Z",
+      "updatedAt": "2025-09-23T16:08:03.818Z"
+    },
+    {
+      "id": "3",
+      "ticketNumber": "T2025-0003",
+      "organizationId": "2",
+      "status": "NEW",
+      "priority": "MEDIUM",
+      "barcodeData": "TICKET:T2025-0003",
+      "assets": [],
+      "attachments": [],
+      "timeEntries": [],
+      "notes": [
+        {
+          "id": "3f0eb151-2baa-4d09-b59c-5c5a416b279c",
+          "userId": "2",
+          "content": "hes a plonker",
+          "isInternal": true,
+          "createdAt": "2025-09-23T19:12:08.461Z"
+        }
+      ],
+      "tags": [],
+      "customFields": {},
+      "customerId": "5",
+      "title": "test",
+      "description": "test",
+      "problemDescription": "test",
+      "createdAt": "2025-09-23T18:58:26.399Z",
+      "updatedAt": "2025-09-23T19:12:08.461Z"
+    }
+  ],
+  "assets": [],
+  "customers": [
+    {
+      "id": "1",
+      "organizationId": "1",
+      "firstName": "Alice",
+      "lastName": "Johnson",
+      "companyName": "Tech Solutions Inc",
+      "contact": {
+        "email": "alice@techsolutions.com",
+        "phone": "+1-555-234-5678"
+      },
+      "address": {
+        "street": "456 Oak Ave",
+        "city": "Demo City",
+        "state": "NY",
+        "postalCode": "12345",
+        "country": "US"
+      },
+      "notes": "Regular customer, prefers email communication",
+      "tags": [
+        "regular",
+        "corporate",
+        "priority"
+      ],
+      "customFields": {},
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "organizationId": "1",
+      "firstName": "Bob",
+      "lastName": "Smith",
+      "contact": {
+        "email": "bob@example.com",
+        "phone": "+1-555-345-6789"
+      },
+      "notes": "Walk-in customer",
+      "tags": [
+        "walk-in"
+      ],
+      "customFields": {},
+      "createdAt": "2024-01-20T00:00:00.000Z",
+      "updatedAt": "2024-01-20T00:00:00.000Z"
+    },
+    {
+      "id": "3",
+      "organizationId": "1",
+      "firstName": "Carol",
+      "lastName": "Williams",
+      "companyName": "Local Business",
+      "contact": {
+        "email": "carol@localbiz.com",
+        "phone": "+1-555-456-7890"
+      },
+      "address": {
+        "street": "789 Pine St",
+        "city": "Demo City",
+        "state": "NY",
+        "postalCode": "12345",
+        "country": "US"
+      },
+      "notes": "Referred by Alice Johnson",
+      "tags": [
+        "referral",
+        "business"
+      ],
+      "customFields": {},
+      "createdAt": "2024-02-01T00:00:00.000Z",
+      "updatedAt": "2024-02-01T00:00:00.000Z"
+    },
+    {
+      "id": "4",
+      "organizationId": "1",
+      "firstName": "David",
+      "lastName": "Brown",
+      "contact": {
+        "email": "david@personal.com",
+        "phone": "+1-555-567-8901"
+      },
+      "notes": "Personal laptop repair",
+      "tags": [
+        "personal"
+      ],
+      "customFields": {},
+      "createdAt": "2024-02-10T00:00:00.000Z",
+      "updatedAt": "2024-02-10T00:00:00.000Z"
+    },
+    {
+      "id": "5",
+      "organizationId": "2",
+      "firstName": "David",
+      "lastName": "Jones",
+      "companyName": "David Jones LTD",
+      "contact": {
+        "email": "david.jones@gmail.com",
+        "phone": "07777777777"
+      },
+      "address": {
+        "street": "6a",
+        "city": "PUKE STREET",
+        "state": "CUMbrio",
+        "postalCode": "PL158HD",
+        "country": "GB"
+      },
+      "tags": [],
+      "customFields": {},
+      "createdAt": "2025-09-23T16:07:38.004Z",
+      "updatedAt": "2025-09-23T16:07:38.004Z"
+    }
+  ],
+  "lastSaved": "2025-09-23T19:12:08.461Z"
+}

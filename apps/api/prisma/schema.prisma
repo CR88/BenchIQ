@@ -1,0 +1,456 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationPlan {
+  FREE
+  PRO
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  TECHNICIAN
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum DeviceType {
+  SMARTPHONE
+  TABLET
+  LAPTOP
+  DESKTOP
+  GAMING_CONSOLE
+  OTHER
+}
+
+enum DeviceCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  BROKEN
+}
+
+enum TicketStatus {
+  NEW
+  IN_PROGRESS
+  WAITING_PARTS
+  READY
+  PICKED_UP
+  CANCELLED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum LineItemType {
+  LABOR
+  PART
+  SERVICE
+  DISCOUNT
+  TAX
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  OTHER
+}
+
+enum InventoryAdjustmentType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model Organization {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  logo            String?
+  plan            OrganizationPlan @default(FREE)
+  activeUserLimit Int              @default(1)
+  settings        Json             @default("{}")
+  address         Json?
+  contact         Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  users              User[]
+  customers          Customer[]
+  devices            Device[]
+  tickets            Ticket[]
+  inventoryItems     InventoryItem[]
+  inventoryAdjustments InventoryAdjustment[]
+  estimates          Estimate[]
+  invoices           Invoice[]
+  payments           Payment[]
+  auditLogs          AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String     @id @default(uuid())
+  email          String     @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  role           UserRole   @default(VIEWER)
+  status         UserStatus @default(ACTIVE)
+  organizationId String
+  contact        Json?
+  preferences    Json       @default("{}")
+  lastLoginAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTickets Ticket[]    @relation("TicketAssignee")
+  timeEntries    TimeEntry[]
+  ticketNotes    TicketNote[]
+  payments       Payment[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+model Customer {
+  id             String   @id @default(uuid())
+  organizationId String
+  firstName      String
+  lastName       String
+  companyName    String?
+  contact        Json     @default("{}")
+  address        Json?
+  notes          String?
+  tags           String[] @default([])
+  customFields   Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  devices      Device[]
+  tickets      Ticket[]
+  estimates    Estimate[]
+  invoices     Invoice[]
+
+  @@map("customers")
+}
+
+model Device {
+  id              String           @id @default(uuid())
+  customerId      String
+  organizationId  String
+  type            DeviceType
+  make            String
+  model           String
+  serialNumber    String?
+  imei            String?
+  color           String?
+  storageCapacity String?
+  condition       DeviceCondition?
+  passcode        String?
+  accessories     String[]         @default([])
+  notes           String?
+  customFields    Json             @default("{}")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tickets      Ticket[]
+
+  @@map("devices")
+}
+
+model Ticket {
+  id                  String         @id @default(uuid())
+  ticketNumber        String         @unique
+  organizationId      String
+  customerId          String
+  deviceId            String?
+  title               String
+  description         String
+  status              TicketStatus   @default(NEW)
+  priority            TicketPriority @default(MEDIUM)
+  assignedTo          String?
+  problemDescription  String
+  solutionDescription String?
+  estimatedCost       Json?
+  actualCost          Json?
+  slaTargetAt         DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  pickedUpAt          DateTime?
+  tags                String[]       @default([])
+  attachments         Json           @default("[]")
+  customFields        Json           @default("{}")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  device       Device?       @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  assignee     User?         @relation("TicketAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  timeEntries  TimeEntry[]
+  notes        TicketNote[]
+  estimates    Estimate[]
+  invoices     Invoice[]
+
+  @@map("tickets")
+}
+
+model TimeEntry {
+  id          String   @id @default(uuid())
+  ticketId    String
+  userId      String
+  description String
+  hours       Float
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("time_entries")
+}
+
+model TicketNote {
+  id         String   @id @default(uuid())
+  ticketId   String
+  userId     String
+  content    String
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_notes")
+}
+
+model InventoryItem {
+  id             String   @id @default(uuid())
+  organizationId String
+  sku            String
+  name           String
+  description    String?
+  category       String?
+  manufacturer   String?
+  model          String?
+  cost           Json
+  price          Json
+  quantity       Int      @default(0)
+  reorderLevel   Int      @default(0)
+  location       String?
+  supplier       String?
+  barcode        String?
+  weight         Float?
+  dimensions     Json?
+  isActive       Boolean  @default(true)
+  tags           String[] @default([])
+  customFields   Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  adjustments  InventoryAdjustment[]
+  lineItems    LineItem[]
+
+  @@unique([organizationId, sku])
+  @@map("inventory_items")
+}
+
+model InventoryAdjustment {
+  id              String                  @id @default(uuid())
+  organizationId  String
+  inventoryItemId String
+  type            InventoryAdjustmentType
+  quantity        Int
+  reason          String
+  notes           String?
+  userId          String
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  // Relations
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_adjustments")
+}
+
+model Estimate {
+  id              String         @id @default(uuid())
+  estimateNumber  String         @unique
+  organizationId  String
+  customerId      String
+  ticketId        String?
+  status          EstimateStatus @default(DRAFT)
+  title           String
+  description     String?
+  totals          Json           @default("{}")
+  validUntil      DateTime?
+  notes           String?
+  terms           String?
+  sentAt          DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  customFields    Json           @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  ticket       Ticket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  lineItems    LineItem[]
+  invoices     Invoice[]
+
+  @@map("estimates")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  invoiceNumber  String        @unique
+  organizationId String
+  customerId     String
+  ticketId       String?
+  estimateId     String?
+  status         InvoiceStatus @default(DRAFT)
+  title          String
+  description    String?
+  totals         Json          @default("{}")
+  dueDate        DateTime?
+  paidAmount     Json          @default("{}")
+  balanceDue     Json          @default("{}")
+  notes          String?
+  terms          String?
+  sentAt         DateTime?
+  paidAt         DateTime?
+  customFields   Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  ticket       Ticket?      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  estimate     Estimate?    @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+  lineItems    LineItem[]
+  payments     Payment[]
+
+  @@map("invoices")
+}
+
+model LineItem {
+  id              String       @id @default(uuid())
+  parentType      String // 'estimate' or 'invoice'
+  parentId        String
+  type            LineItemType
+  description     String
+  quantity        Float
+  unitPrice       Json
+  discountPercent Float        @default(0)
+  taxRate         Float        @default(0)
+  total           Json
+  inventoryItemId String?
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  estimate      Estimate?     @relation(fields: [parentId], references: [id], onDelete: Cascade, map: "estimate_line_items")
+  invoice       Invoice?      @relation(fields: [parentId], references: [id], onDelete: Cascade, map: "invoice_line_items")
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@map("line_items")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  organizationId String
+  amount         Json
+  method         PaymentMethod
+  reference      String?
+  notes          String?
+  processedBy    String
+  processedAt    DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [processedBy], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  entity         String
+  entityId       String
+  actorId        String?
+  action         String
+  before         Json?
+  after          Json?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
