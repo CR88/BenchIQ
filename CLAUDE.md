@@ -23,7 +23,7 @@ npm run docker:up
 # 4. Wait for services to be healthy (check with: docker ps | grep benchiq)
 
 # 5. Run database migrations (creates all tables)
-cd apps/api && npx prisma migrate dev --name initial_schema && cd ../..
+npm run db:migrate
 
 # 6. (Optional) Seed the database with demo data
 npm run db:seed
@@ -45,6 +45,9 @@ npm run dev
 ```bash
 # API development (NestJS on port 3001)
 npm run dev --workspace=apps/api
+
+# API in mock mode (no database required, uses mock-data.service)
+npm run dev:mock --workspace=apps/api
 
 # Web development (Next.js on port 3000)
 npm run dev --workspace=apps/web
@@ -95,14 +98,15 @@ cd apps/api && npx prisma migrate reset
     /customers/             # Customer management (CRUD operations)
     /dashboard/             # Dashboard stats and analytics
     /devices/               # Device tracking for repairs
-    /estimates/             # Repair estimates (NOT IMPLEMENTED YET)
-    /inventory/             # Parts inventory (NOT IMPLEMENTED YET)
-    /invoices/              # Invoice management (NOT IMPLEMENTED YET)
     /organizations/         # Multi-tenant org management
+    /shared/                # Shared utilities (mock-data.service.ts)
     /tickets/               # Repair ticket workflow
     /users/                 # User management
+    main.ts                # Main entry point
+    main-mock.ts           # Mock mode (no database required)
+    main-demo.ts           # Demo mode entry point
   /prisma/
-    schema.prisma          # Database schema definition
+    schema.prisma          # Database schema (includes Estimate, Invoice, Inventory models)
     seed.ts               # Seed data script
 
 /apps/web/                 # Next.js frontend
@@ -112,20 +116,26 @@ cd apps/api && npx prisma migrate reset
       /auth/               # Authentication pages (login/register)
       /customers/          # Customer management UI
       /dashboard/          # Main dashboard with stats
-      /estimates/          # Estimates page (UI only)
-      /inventory/          # Inventory page (UI only)
-      /invoices/           # Invoices page (UI only)
+      /estimates/          # Estimates page (UI only, no backend)
+      /inventory/          # Inventory page (UI only, no backend)
+      /invoices/           # Invoices page (UI only, no backend)
       /settings/           # Organization settings
       /tickets/            # Active tickets view
     /components/           # Reusable React components
-      Navigation.tsx       # Main navigation sidebar/mobile menu
-      DashboardLayout.tsx  # Layout wrapper with navigation
-      AddCustomerModal.tsx # Customer creation modal
-      CreateTicketModal.tsx # Ticket creation modal
+      AddCustomerModal.tsx        # Customer creation modal
+      CreateTicketModal.tsx       # Ticket creation modal
+      DashboardLayout.tsx         # Layout wrapper with navigation
+      FileUploadModal.tsx         # File upload component
+      LocationAwareAddressForm.tsx # Address input with geocoding
+      Navigation.tsx              # Main navigation sidebar/mobile menu
+      PrintableJobSheet.tsx       # Printable ticket/job sheet
+      TicketNotesModal.tsx        # Ticket notes interface
     /hooks/                # Custom React hooks (useAuth, etc.)
     /lib/                  # API client and utilities
 
-/packages/                 # Shared packages (future use)
+/packages/                 # Shared packages
+  /types/                  # Shared TypeScript types and Zod schemas
+  /ui/                     # Shared UI components
 /infra/                   # Docker compose for local dev
 ```
 
@@ -135,7 +145,7 @@ cd apps/api && npx prisma migrate reset
 2. **Plan Limits**: FREE (1 user) vs PRO (unlimited users) enforced at API level
 3. **Authentication**: JWT access tokens + refresh tokens pattern
 4. **API Structure**: RESTful endpoints under `/api/v1/*`
-5. **Mock Mode**: Separate mock endpoints for demo/testing (`main-mock.ts`)
+5. **Mock Mode**: Alternative entry point (`main-mock.ts`) runs API without database using `mock-data.service.ts` - useful for demo/testing
 
 ### Database Schema Highlights
 
@@ -191,10 +201,12 @@ Password: password123
 - Organization settings
 - Navigation (desktop sidebar, mobile menu)
 
-#### UI Only (Backend Not Implemented) ⚠️
-- Inventory management
-- Estimates
-- Invoices
+#### Database Schema Only (No API Endpoints) ⚠️
+- Inventory management (InventoryItem, InventoryAdjustment models exist)
+- Estimates (Estimate, EstimateLineItem models exist)
+- Invoices (Invoice, InvoiceLineItem, Payment models exist)
+- Time tracking (TimeEntry model exists)
+- Ticket notes (TicketNote model exists)
 
 #### Not Started ❌
 - Email notifications
