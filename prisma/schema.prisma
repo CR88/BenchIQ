@@ -1,0 +1,616 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ─────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  TECHNICIAN
+  STAFF
+}
+
+enum TicketStatus {
+  RECEIVED
+  DIAGNOSED
+  WAITING_PARTS
+  IN_REPAIR
+  QA
+  READY_FOR_PICKUP
+  COMPLETE
+  CANCELLED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIAL_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentType {
+  IN_STORE
+  ON_SITE
+}
+
+enum DeviceCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// ─── ORGANIZATION & MULTI-STORE ────────────────────────────
+
+model Organization {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  plan            SubscriptionPlan @default(FREE)
+  logo            String?
+  email           String?
+  phone           String?
+  website         String?
+  taxId           String?
+  defaultCurrency String           @default("GBP")
+  taxRate         Decimal          @default(0.20) @db.Decimal(5, 4)
+  timezone        String           @default("Europe/London")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  stores         Store[]
+  users          User[]
+  customers      Customer[]
+  devices        Device[]
+  products       Product[]
+  tickets        Ticket[]
+  invoices       Invoice[]
+  suppliers      Supplier[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("organizations")
+}
+
+model Store {
+  id       String  @id @default(cuid())
+  orgId    String
+  name     String
+  slug     String
+  address  String?
+  city     String?
+  postcode String?
+  country  String? @default("GB")
+  phone    String?
+  email    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization      Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userStores        UserStore[]
+  tickets           Ticket[]
+  appointments      Appointment[]
+  stockItems        StockItem[]
+  storageLocations  StorageLocation[]
+  invoices          Invoice[]
+  salesTransactions SaleTransaction[]
+
+  @@unique([orgId, slug])
+  @@map("stores")
+}
+
+// ─── USERS & AUTH ──────────────────────────────────────────
+
+model User {
+  id             String    @id @default(cuid())
+  orgId          String
+  email          String    @unique
+  name           String
+  hashedPassword String?
+  image          String?
+  role           Role      @default(STAFF)
+  isActive       Boolean   @default(true)
+  emailVerified  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization      Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  stores            UserStore[]
+  accounts          Account[]
+  sessions          Session[]
+  assignedTickets   TicketAssignment[]
+  appointments      Appointment[]      @relation("TechnicianAppointments")
+  ticketNotes       TicketNote[]
+  ticketHistory     TicketHistory[]
+  salesTransactions SaleTransaction[]
+
+  @@map("users")
+}
+
+model UserStore {
+  id      String @id @default(cuid())
+  userId  String
+  storeId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@map("user_stores")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── CUSTOMERS ─────────────────────────────────────────────
+
+model Customer {
+  id                 String   @id @default(cuid())
+  orgId              String
+  firstName          String
+  lastName           String
+  email              String?
+  phone              String?
+  address            String?
+  city               String?
+  postcode           String?
+  notes              String?
+  emailNotifications Boolean  @default(true)
+  smsNotifications   Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization      Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  devices           Device[]
+  tickets           Ticket[]
+  invoices          Invoice[]
+  salesTransactions SaleTransaction[]
+
+  @@index([orgId, email])
+  @@index([orgId, phone])
+  @@index([orgId, lastName])
+  @@map("customers")
+}
+
+// ─── DEVICES ───────────────────────────────────────────────
+
+model Device {
+  id           String   @id @default(cuid())
+  orgId        String
+  customerId   String
+  type         String
+  brand        String?
+  model        String?
+  serialNumber String?
+  imei         String?
+  color        String?
+  passcode     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tickets      Ticket[]
+
+  @@index([orgId, serialNumber])
+  @@index([orgId, imei])
+  @@map("devices")
+}
+
+// ─── TICKETS ───────────────────────────────────────────────
+
+model Ticket {
+  id                   String           @id @default(cuid())
+  ticketNumber         String           @unique
+  orgId                String
+  storeId              String
+  customerId           String
+  deviceId             String
+  status               TicketStatus     @default(RECEIVED)
+  priority             TicketPriority   @default(NORMAL)
+  title                String
+  description          String?
+  diagnosis            String?
+  estimatedCost        Decimal?         @db.Decimal(10, 2)
+  actualCost           Decimal?         @db.Decimal(10, 2)
+  estimatedCompletion  DateTime?
+  conditionOnIntake    DeviceCondition?
+  intakeNotes          String?
+  intakePhotos         String[]
+  customerSignatureIn  String?
+  completionNotes      String?
+  customerSignatureOut String?
+  completedAt          DateTime?
+  pickedUpAt           DateTime?
+  storageLocationId    String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  organization    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  store           Store            @relation(fields: [storeId], references: [id])
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  device          Device           @relation(fields: [deviceId], references: [id])
+  storageLocation StorageLocation? @relation(fields: [storageLocationId], references: [id])
+  assignments     TicketAssignment[]
+  notes           TicketNote[]
+  history         TicketHistory[]
+  lineItems       TicketLineItem[]
+  invoice         Invoice?
+
+  @@index([orgId, storeId, status])
+  @@index([orgId, customerId])
+  @@index([ticketNumber])
+  @@map("tickets")
+}
+
+model TicketAssignment {
+  id           String    @id @default(cuid())
+  ticketId     String
+  userId       String
+  assignedAt   DateTime  @default(now())
+  unassignedAt DateTime?
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("ticket_assignments")
+}
+
+model TicketNote {
+  id         String   @id @default(cuid())
+  ticketId   String
+  userId     String
+  content    String
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("ticket_notes")
+}
+
+model TicketHistory {
+  id         String        @id @default(cuid())
+  ticketId   String
+  userId     String?
+  fromStatus TicketStatus?
+  toStatus   TicketStatus
+  note       String?
+  createdAt  DateTime      @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@map("ticket_history")
+}
+
+model TicketLineItem {
+  id          String   @id @default(cuid())
+  ticketId    String
+  productId   String?
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  isLabor     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("ticket_line_items")
+}
+
+// ─── INVENTORY ─────────────────────────────────────────────
+
+model Product {
+  id           String   @id @default(cuid())
+  orgId        String
+  sku          String?
+  barcode      String?
+  name         String
+  description  String?
+  category     String?
+  costPrice    Decimal? @db.Decimal(10, 2)
+  retailPrice  Decimal  @db.Decimal(10, 2)
+  isSerialized Boolean  @default(false)
+  isService    Boolean  @default(false)
+  reorderPoint Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization       Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  stockItems         StockItem[]
+  ticketLineItems    TicketLineItem[]
+  saleLineItems      SaleLineItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  @@unique([orgId, sku])
+  @@index([orgId, barcode])
+  @@index([orgId, name])
+  @@map("products")
+}
+
+model StockItem {
+  id        String   @id @default(cuid())
+  productId String
+  storeId   String
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+  @@map("stock_items")
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  website     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  orderNumber String              @unique
+  orgId       String
+  supplierId  String
+  status      PurchaseOrderStatus @default(DRAFT)
+  notes       String?
+  orderedAt   DateTime?
+  expectedAt  DateTime?
+  receivedAt  DateTime?
+  totalCost   Decimal?            @db.Decimal(10, 2)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  organization Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  items        PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitCost        Decimal       @db.Decimal(10, 2)
+  receivedQty     Int           @default(0)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// ─── APPOINTMENTS ──────────────────────────────────────────
+
+model Appointment {
+  id           String            @id @default(cuid())
+  storeId      String
+  customerId   String?
+  technicianId String?
+  type         AppointmentType   @default(IN_STORE)
+  status       AppointmentStatus @default(SCHEDULED)
+  title        String
+  description  String?
+  startTime    DateTime
+  endTime      DateTime
+  address      String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  store      Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  technician User? @relation("TechnicianAppointments", fields: [technicianId], references: [id])
+
+  @@index([storeId, startTime, endTime])
+  @@index([technicianId, startTime])
+  @@map("appointments")
+}
+
+// ─── INVOICING & POS ───────────────────────────────────────
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  orgId         String
+  storeId       String
+  ticketId      String?       @unique
+  customerId    String?
+  status        InvoiceStatus @default(DRAFT)
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxRate       Decimal       @default(0.20) @db.Decimal(5, 4)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  notes         String?
+  dueDate       DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  store        Store        @relation(fields: [storeId], references: [id])
+  ticket       Ticket?      @relation(fields: [ticketId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  payments     Payment[]
+
+  @@index([orgId, storeId, status])
+  @@map("invoices")
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  amount    Decimal       @db.Decimal(10, 2)
+  method    PaymentMethod
+  reference String?
+  paidAt    DateTime      @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model SaleTransaction {
+  id            String        @id @default(cuid())
+  storeId       String
+  userId        String
+  customerId    String?
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  paymentRef    String?
+  createdAt     DateTime      @default(now())
+
+  store     Store          @relation(fields: [storeId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
+  customer  Customer?      @relation(fields: [customerId], references: [id])
+  lineItems SaleLineItem[]
+
+  @@index([storeId, createdAt])
+  @@map("sale_transactions")
+}
+
+model SaleLineItem {
+  id                String          @id @default(cuid())
+  saleTransactionId String
+  productId         String?
+  description       String
+  quantity          Int             @default(1)
+  unitPrice         Decimal         @db.Decimal(10, 2)
+
+  saleTransaction SaleTransaction @relation(fields: [saleTransactionId], references: [id], onDelete: Cascade)
+  product         Product?        @relation(fields: [productId], references: [id])
+
+  @@map("sale_line_items")
+}
+
+// ─── STORAGE ───────────────────────────────────────────────
+
+model StorageLocation {
+  id         String   @id @default(cuid())
+  storeId    String
+  zone       String
+  shelf      String
+  bin        String?
+  label      String
+  qrCode     String?
+  isOccupied Boolean  @default(false)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@unique([storeId, label])
+  @@map("storage_locations")
+}
